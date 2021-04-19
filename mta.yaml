@@ -1,0 +1,118 @@
+_schema-version: "3.2"
+ID: scmta
+version: 0.0.1
+modules:
+- name: scworkflow
+  type: com.sap.application.content
+  path: scworkflow
+  requires:
+  - name: workflow_mta
+    parameters:
+      content-target: true
+- name: scmta-destination-content
+  type: com.sap.application.content
+  requires:
+  - name: scmta-destination-service
+    parameters:
+      content-target: true
+  - name: scmta_html_repo_host
+    parameters:
+      service-key:
+        name: scmta_html_repo_host-key
+  - name: uaa_scmta
+    parameters:
+      service-key:
+        name: uaa_scmta-key
+  parameters:
+    content:
+      subaccount:
+        destinations:
+        - Name: scuploadui_scmta_html_repo_host
+          ServiceInstanceName: scmta-html5-app-host-service
+          ServiceKeyName: scmta_html_repo_host-key
+          sap.cloud.service: scuploadui
+        - Authentication: OAuth2UserTokenExchange
+          Name: scuploadui_uaa_scmta
+          ServiceInstanceName: scmta-xsuaa-service
+          ServiceKeyName: uaa_scmta-key
+          sap.cloud.service: scuploadui
+        existing_destinations_policy: ignore
+  build-parameters:
+    no-source: true
+- name: scmta_ui_deployer
+  type: com.sap.application.content
+  path: .
+  requires:
+  - name: scmta_html_repo_host
+    parameters:
+      content-target: true
+  build-parameters:
+    build-result: resources
+    requires:
+    - artifacts:
+      - scuploadui-content.zip
+      name: scuploadui
+      target-path: resources/
+    - artifacts:
+      - scapproveui-content.zip
+      name: scapproveui
+      target-path: resources/
+- name: scuploadui
+  type: html5
+  path: scuploadui
+  build-parameters:
+    builder: custom
+    commands:
+    - npm run build
+    supported-platforms: []
+- name: scapproveui
+  type: html5
+  path: scapproveui
+  build-parameters:
+    builder: custom
+    commands:
+    - npm run build
+    supported-platforms: []
+resources:
+- name: workflow_mta
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: workflow
+    service-plan: lite
+- name: scmta-destination-service
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: true
+      version: 1.0.0
+    service: destination
+    service-name: scmta-destination-service
+    service-plan: lite
+- name: scmta_html_repo_host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-name: scmta-html5-app-host-service
+    service-plan: app-host
+- name: uaa_scmta
+  type: org.cloudfoundry.managed-service
+  parameters:
+    path: ./xs-security.json
+    service: xsuaa
+    service-name: scmta-xsuaa-service
+    service-plan: application
+- name: dest_app
+  type:  org.cloudfoundry.existing-service
+  parameters:
+    service-plan: lite
+    service: destination
+- name: dest_connectivity
+  type: org.cloudfoundry.existing-service
+  parameters:
+    service: connectivity
+    service-plan: lite    
+build-parameters:
+  before-all:
+  - builder: custom
+    commands:
+    - npm install
